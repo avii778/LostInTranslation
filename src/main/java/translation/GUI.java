@@ -1,7 +1,12 @@
 package translation;
 
 import javax.swing.*;
-import java.awt.event.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
+
 
 
 // TODO Task D: Update the GUI for the program to align with UI shown in the README example.
@@ -13,62 +18,84 @@ public class GUI {
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            JPanel countryPanel = new JPanel();
-            JTextField countryField = new JTextField(10);
-            countryField.setText("can");
-            countryField.setEditable(false); // we only support the "can" country code for now
-            countryPanel.add(new JLabel("Country:"));
-            countryPanel.add(countryField);
+            Translator translator = new JSONTranslator();
 
             JPanel languagePanel = new JPanel();
-            JTextField languageField = new JTextField(10);
-            languagePanel.add(new JLabel("Language:"));
-            languagePanel.add(languageField);
+            languagePanel.setLayout(new GridLayout(0, 2));
+            languagePanel.add(new JLabel("Language:"), 0);
 
-            JPanel buttonPanel = new JPanel();
-            JButton submit = new JButton("Submit");
-            buttonPanel.add(submit);
+            List<String> langs = translator.getLanguageCodes();
+            String[] languageItems = langs.toArray(new String[0]);
 
-            JLabel resultLabelText = new JLabel("Translation:");
-            buttonPanel.add(resultLabelText);
-            JLabel resultLabel = new JLabel("\t\t\t\t\t\t\t");
-            buttonPanel.add(resultLabel);
+            JList<String> languageList = new JList<>(languageItems);
+            languageList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+            languageList.setVisibleRowCount(4); // show a few rows; scroll for more
+            JScrollPane languageScroll = new JScrollPane(languageList);
+            languagePanel.add(languageScroll, 1);
+
+            if (langs.contains("en")) {
+                languageList.setSelectedValue("en", true);
+            } else if (!langs.isEmpty()) {
+                languageList.setSelectedIndex(0);
+            }
+
+            JLabel translationLabel = new JLabel("Translation: ");
+            translationLabel.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
 
 
-            // adding listener for when the user clicks the submit button
-            submit.addActionListener(new ActionListener() {
+            List<String> alpha3Codes = translator.getCountryCodes();
+            List<String> countryDisplayNames = new ArrayList<>(alpha3Codes.size());
+            for (String c : alpha3Codes) {
+                String englishName = translator.translate(c, "en");
+                countryDisplayNames.add(englishName != null ? englishName : c);
+            }
+            String[] countryItems = countryDisplayNames.toArray(new String[0]);
+
+            JList<String> countryList = new JList<>(countryItems);
+            countryList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+            countryList.setVisibleRowCount(12);
+            JScrollPane countryScroll = new JScrollPane(countryList);
+
+            if (!alpha3Codes.isEmpty()) {
+                countryList.setSelectedIndex(0);
+            }
+
+            ListSelectionListener updateTranslation = new ListSelectionListener() {
                 @Override
-                public void actionPerformed(ActionEvent e) {
-                    String language = languageField.getText();
-                    String country = countryField.getText();
+                public void valueChanged(ListSelectionEvent e) {
+                    if (e.getValueIsAdjusting()) return;
 
-                    // for now, just using our simple translator, but
-                    // we'll need to use the real JSON version later.
-                    Translator translator = new CanadaTranslator();
-
-                    String result = translator.translate(country, language);
-                    if (result == null) {
-                        result = "no translation found!";
+                    String lang = languageList.getSelectedValue();
+                    int countryIdx = countryList.getSelectedIndex();
+                    if (lang == null || countryIdx < 0) {
+                        translationLabel.setText("Translation: ");
+                        return;
                     }
-                    resultLabel.setText(result);
-
+                    String countryAlpha3 = alpha3Codes.get(countryIdx);
+                    String translated = translator.translate(countryAlpha3, lang);
+                    if (translated == null || translated.isBlank()) {
+                        translated = "(no translation found)";
+                    }
+                    translationLabel.setText("Translation: " + translated);
                 }
+            };
+            languageList.addListSelectionListener(updateTranslation);
+            countryList.addListSelectionListener(updateTranslation);
 
-            });
+            updateTranslation.valueChanged(new ListSelectionEvent(languageList, 0, 0, false));
 
             JPanel mainPanel = new JPanel();
             mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
-            mainPanel.add(countryPanel);
             mainPanel.add(languagePanel);
-            mainPanel.add(buttonPanel);
+            mainPanel.add(translationLabel);
+            mainPanel.add(countryScroll);
 
             JFrame frame = new JFrame("Country Name Translator");
             frame.setContentPane(mainPanel);
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.setLocationRelativeTo(null);
             frame.pack();
             frame.setVisible(true);
-
-
         });
     }
 }
