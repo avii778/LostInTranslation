@@ -21,26 +21,26 @@ public class GUI {
             Translator translator = new JSONTranslator();
 
             JPanel languagePanel = new JPanel();
-            languagePanel.setLayout(new GridLayout(0, 2));
-            languagePanel.add(new JLabel("Language:"), 0);
 
             List<String> langs = translator.getLanguageCodes();
             String[] languageItems = langs.toArray(new String[0]);
 
-            JList<String> languageList = new JList<>(languageItems);
-            languageList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-            languageList.setVisibleRowCount(4); // show a few rows; scroll for more
-            JScrollPane languageScroll = new JScrollPane(languageList);
-            languagePanel.add(languageScroll, 1);
+            languagePanel.add(new JLabel("Language:"));
 
-            if (langs.contains("en")) {
-                languageList.setSelectedValue("en", true);
-            } else if (!langs.isEmpty()) {
-                languageList.setSelectedIndex(0);
+            // create combobox, add country codes into it, and add it to our panel
+            JComboBox<String> languageComboBox = new JComboBox<>();
+            LanguageCodeConverter langconverter = new LanguageCodeConverter();
+            for(String languageCode : langs) {
+                languageComboBox.addItem(langconverter.fromLanguageCode(languageCode));
             }
+            languagePanel.add(languageComboBox);
+
+            JList<String> languageList = new JList<>(languageItems);
+
 
             JLabel translationLabel = new JLabel("Translation: ");
             translationLabel.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
+            translationLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
 
             List<String> alpha3Codes = translator.getCountryCodes();
@@ -64,6 +64,13 @@ public class GUI {
                 @Override
                 public void valueChanged(ListSelectionEvent e) {
                     if (e.getValueIsAdjusting()) return;
+                    String displayName = languageComboBox.getSelectedItem().toString();
+
+                    String langCode = langconverter.fromLanguage(displayName);
+
+                    if (langs.contains(langCode)) {
+                        languageList.setSelectedValue(langCode, true);
+                    }
 
                     String lang = languageList.getSelectedValue();
                     int countryIdx = countryList.getSelectedIndex();
